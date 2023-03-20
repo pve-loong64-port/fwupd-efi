@@ -1,3 +1,11 @@
+fwupd-efi (1:1.4-1+pmx1) bookworm; urgency=medium
+
+  * Rebuild for Proxmox:
+  ** Change SBAT data
+  ** Change package metadata
+
+ -- Proxmox Support Team <support@proxmox.com>  Mon, 20 Mar 2023 11:21:49 +0100
+
 fwupd-efi (1:1.4-1) unstable; urgency=medium
 
   [ Mario Limonciello ]
