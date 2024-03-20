@@ -1,6 +1,25 @@
 generate_sbat = find_program('generate_sbat.py', native: true)
 generate_binary = find_program('generate_binary.py', native: true)
 
+# get source version, falling back
+git = find_program('git', required : false)
+if git.found()
+  source_version = run_command(git, 'describe', check: false).stdout().strip()
+else
+  source_version = 'unknown'
+endif
+
+if uswid.found()
+  con2 = configuration_data()
+  con2.set('project_version', meson.project_version())
+  con2.set('source_version', source_version)
+  swid_xml = configure_file(
+    input : 'swid.xml.in',
+    output : 'swid.xml',
+    configuration : con2,
+  )
+endif
+
 efi_ldsdir = get_option('efi-ldsdir')
 efi_incdir = get_option('efi-includedir')
 
@@ -18,8 +37,12 @@ endif
 
 efi_libdir = get_option('efi-libdir')
 if efi_libdir == ''
-  multi = run_command(cc.cmd_array(), '-print-multi-os-directory').stdout().strip()
+  fs = import('fs')
+  multi = run_command(cc.cmd_array(), '-print-multi-os-directory', check: true).stdout().strip()
   efi_libdir = join_paths('/usr/lib/', multi)
+  if not fs.is_dir(join_paths(efi_libdir, 'gnuefi'))
+    efi_libdir = '/usr/lib'
+  endif
 endif
 
 have_gnu_efi = gnu_efi_path_arch != '' and efi_libdir != ''
@@ -38,26 +61,26 @@ arch_lds = 'efi.lds'
 arch_crt = 'crt0.o'
 if efi_ldsdir == ''
   efi_ldsdir = join_paths(efi_libdir, 'gnuefi', gnu_efi_path_arch)
-  cmd = run_command('test', '-f', join_paths(efi_ldsdir, arch_lds))
+  cmd = run_command('test', '-f', join_paths(efi_ldsdir, arch_lds), check: false)
   if cmd.returncode() != 0
     arch_lds = 'elf_@0@@1@_efi.lds'.format(gnu_efi_path_arch, lds_os)
     arch_crt = 'crt0-efi-@0@.o'.format(gnu_efi_path_arch)
     efi_ldsdir = join_paths(efi_libdir, 'gnuefi')
-    cmd = run_command('test', '-f', join_paths(efi_ldsdir, arch_lds))
+    cmd = run_command('test', '-f', join_paths(efi_ldsdir, arch_lds), check: false)
   endif
   if cmd.returncode() != 0
     efi_ldsdir = efi_libdir
-    cmd = run_command('test', '-f', join_paths(efi_ldsdir, arch_lds))
+    cmd = run_command('test', '-f', join_paths(efi_ldsdir, arch_lds), check: false)
     if cmd.returncode() != 0
       error('Cannot find @0@'.format(arch_lds))
     endif
   endif
 else
-  cmd = run_command('test', '-f', join_paths(efi_ldsdir, arch_lds))
+  cmd = run_command('test', '-f', join_paths(efi_ldsdir, arch_lds), check: false)
   if cmd.returncode() != 0
     arch_lds = 'elf_@0@@1@_efi.lds'.format(gnu_efi_path_arch, lds_os)
     arch_crt = 'crt0-efi-@0@.o'.format(gnu_efi_path_arch)
-    cmd = run_command('test', '-f', join_paths(efi_ldsdir, arch_lds))
+    cmd = run_command('test', '-f', join_paths(efi_ldsdir, arch_lds), check: false)
   endif
   if cmd.returncode() != 0
     error('Cannot find @0@'.format(arch_lds))
@@ -72,9 +95,17 @@ else
         coff_header_in_crt0 = false
 endif
 
-# older objcopy for Aarch64 and ARM32 are not EFI capable.
+# For NX compat, we must ensure we have .note.GNU-stack
+if run_command('grep', '-q', '.note.GNU-stack', join_paths(efi_crtdir, arch_crt), check: false).returncode() != 0
+  warning('Cannot find NX section in @0@, update to gnu-efi 3.0.15+'.format(join_paths(efi_crtdir, arch_crt)))
+endif
+
+# older objcopy for Aarch64, ARM32 and RISC-V are not EFI capable.
 # Use 'binary' instead, and add required symbols manually.
-if host_cpu == 'arm' or (host_cpu == 'aarch64' and (objcopy_version.version_compare ('< 2.38') or coff_header_in_crt0))
+if host_cpu == 'arm' or host_cpu == 'riscv64' or (host_cpu == 'aarch64' and (objcopy_version.version_compare ('< 2.38') or coff_header_in_crt0 or uswid.found()))
+  objcopy_manualsymbols = true
+  generate_binary_extra = ['--objcopy-manualsymbols']
+elif host_cpu == 'loongarch64' and (objcopy_version.version_compare ('< 2.41') or coff_header_in_crt0)
   objcopy_manualsymbols = true
   generate_binary_extra = ['--objcopy-manualsymbols']
 else
@@ -85,18 +116,25 @@ endif
 # is the system linker script new enough to know about SBAT?
 # i.e. gnu-efi with https://github.com/vathpela/gnu-efi/pull/14 has been installed
 if get_option('efi_sbat_distro_id') != ''
-  cmd = run_command('grep', '-q', 'sbat', join_paths(efi_ldsdir, arch_lds))
+  cmd = run_command('grep', '-q', 'sbat', join_paths(efi_ldsdir, arch_lds), check: false)
   if cmd.returncode() != 0
     warning('Cannot find SBAT section in @0@, using local copy'.format(join_paths(efi_ldsdir, arch_lds)))
     efi_ldsdir = join_paths(meson.current_source_dir(), 'lds')
+    arch_lds = 'elf_@0@@1@_efi.lds'.format(gnu_efi_arch, lds_os)
   endif
+endif
+
+# SBOM is never in system lds
+if uswid.found()
+  warning('Switching to local copy of linker script as using SBOM')
+  efi_ldsdir = join_paths(meson.current_source_dir(), 'lds')
+  arch_lds = 'elf_@0@@1@_efi.lds'.format(gnu_efi_arch, lds_os)
 endif
 
 # is the system crt0 for arm and aarch64 new enough to know about SBAT?
 if objcopy_manualsymbols
   if get_option('efi_sbat_distro_id') != ''
-    arch_crt_source = 'crt0-efi-@0@.S'.format(gnu_efi_path_arch)
-    cmd = run_command('grep', '-q', 'sbat', join_paths(efi_crtdir, arch_crt))
+    cmd = run_command('grep', '-q', 'sbat', join_paths(efi_crtdir, arch_crt), check: false)
     if cmd.returncode() != 0
       warning('Cannot find SBAT section in @0@, using local copy'.format(join_paths(efi_crtdir, arch_crt)))
       # The gnuefi libraries are still needed
@@ -104,6 +142,15 @@ if objcopy_manualsymbols
       efi_crtdir = join_paths(meson.current_build_dir(), 'crt0')
       efi_ldsdir = join_paths(meson.current_source_dir(), 'lds')
     endif
+  endif
+endif
+
+# SBOM not in system crt0
+if objcopy_manualsymbols
+  if uswid.found()
+    warning('Switching to local copy of crt0 as using SBOM')
+    efi_crtdir = join_paths(meson.current_build_dir(), 'crt0')
+    efi_ldsdir = join_paths(meson.current_source_dir(), 'lds')
   endif
 endif
 
@@ -122,12 +169,13 @@ compile_args = ['-Og',
                 '-Wvla',
                 '-std=gnu11',
                 '-fpic',
+                '-funsigned-char',
                 '-fshort-wchar',
                 '-ffreestanding',
                 '-fno-strict-aliasing',
                 '-fno-stack-protector',
                 '-fno-stack-check',
-                '-fno-merge-constants',
+                '-fno-merge-all-constants',
                 '-Wsign-compare',
                 '-Wno-missing-field-initializers',
                 '-Wno-address-of-packed-member',
@@ -136,6 +184,8 @@ compile_args = ['-Og',
                 '-I.',
                 '-isystem', efi_incdir,
                 '-isystem', join_paths(efi_incdir, gnu_efi_path_arch)]
+# clang only has fno-merge-all-constants
+compile_args += cc.first_supported_argument('-fno-merge-constants')
 if get_option('werror')
     compile_args += '-Werror'
 endif
@@ -163,40 +213,50 @@ efi_ldflags = ['-T',
                '-L', efi_libdir,
                join_paths(efi_crtdir, arch_crt)]
 
+if host_cpu == 'aarch64' or host_cpu == 'arm'
+# Don't use 64KiB pages
+  efi_ldflags += ['-z', 'common-page-size=4096']
+  efi_ldflags += ['-z', 'max-page-size=4096']
+endif
+
 if objcopy_manualsymbols
-  # older objcopy for Aarch64 and ARM32 are not EFI capable.
+  # older objcopy for Aarch64, ARM32 and RISC-V are not EFI capable.
   # Use 'binary' instead, and add required symbols manually.
-  efi_ldflags += ['--defsym=EFI_SUBSYSTEM=0xa']
+  if efi_crtdir != join_paths(meson.current_build_dir(), 'crt0')
+    # Using system so without crt0 generator
+    efi_ldflags += ['--defsym=EFI_SUBSYSTEM=0xa']
+  endif
   efi_format = ['-O', 'binary']
 else
   efi_format = ['--target=efi-app-@0@'.format(gnu_efi_arch)]
 endif
 
-libgcc_file_name = run_command(cc.cmd_array(), '-print-libgcc-file-name').stdout().strip()
+libgcc_file_name = run_command(cc.cmd_array(), '-print-libgcc-file-name', check: true).stdout().strip()
 efi_name = 'fwupd@0@.efi'.format(EFI_MACHINE_TYPE_NAME)
 
-o_file1 = custom_target('fwupdate.o',
+o_files = []
+o_files += custom_target('fwupdate.o',
                         input : 'fwupdate.c',
                         output : 'fwupdate.o',
                         command : [cc.cmd_array(), '-c', '@INPUT@', '-o', '@OUTPUT@']
                                   + compile_args)
-o_file2 = custom_target('fwup-debug.o',
+o_files += custom_target('fwup-debug.o',
                         input : 'fwup-debug.c',
                         output : 'fwup-debug.o',
                         command : [cc.cmd_array(), '-c', '@INPUT@', '-o', '@OUTPUT@']
                                   + compile_args)
-o_file3 = custom_target('fwup-efi.o',
+o_files += custom_target('fwup-efi.o',
                         input : 'fwup-efi.c',
                         output : 'fwup-efi.o',
                         command : [cc.cmd_array(), '-c', '@INPUT@', '-o', '@OUTPUT@']
                                   + compile_args)
-o_file4 = custom_target('fwup-common.o',
+o_files += custom_target('fwup-common.o',
                         input : 'fwup-common.c',
                         output : 'fwup-common.o',
                         command : [cc.cmd_array(), '-c', '@INPUT@', '-o', '@OUTPUT@']
                                   + compile_args)
 
-o_file5 = custom_target('fwup-sbat.o',
+o_files += custom_target('fwup-sbat.o',
                         output : 'fwup-sbat.o',
                         command : [
                           generate_sbat,
@@ -216,6 +276,23 @@ o_file5 = custom_target('fwup-sbat.o',
                           '--sbat-distro-url', get_option('efi_sbat_distro_url'),
                         ])
 
+if uswid.found()
+  if uswid.version().version_compare('>=0.4.3')
+    uswid_cflags = ['--cflags', ' '.join(compile_args)]
+  else
+    uswid_cflags = []
+  endif
+  o_files += custom_target('fwup-sbom.o',
+                          output : 'fwup-sbom.o',
+                          command : [
+                            'uswid',
+                            '--cc', cc.cmd_array()[-1],
+                            '--objcopy', objcopy,
+                            '--load', swid_xml,
+                            '--save', '@OUTPUT@',
+                          ] + uswid_cflags)
+endif
+
 fwupd_so_deps = []
 if efi_crtdir == join_paths(meson.current_build_dir(), 'crt0')
   # A custom crt0 is needed
@@ -223,11 +300,16 @@ if efi_crtdir == join_paths(meson.current_build_dir(), 'crt0')
   fwupd_so_deps += [o_crt0]
 endif
 
+efi_cc_ldflags = []
+foreach flag : efi_ldflags
+  efi_cc_ldflags += ['-Wl,' + flag]
+endforeach
+
 so = custom_target('fwup.so',
-                   input : [o_file1, o_file2, o_file3, o_file4, o_file5],
+                   input : o_files,
                    output : 'fwup.so',
-                   command : [ld, '-o', '@OUTPUT@'] +
-                             efi_ldflags + ['@INPUT@'] +
+                   command : [cc.cmd_array(), '-nostdlib', '-o', '@OUTPUT@'] +
+                             efi_cc_ldflags + ['@INPUT@'] +
                              ['-lefi', '-lgnuefi', libgcc_file_name],
                    depends: fwupd_so_deps)
 

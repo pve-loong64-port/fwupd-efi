@@ -21,6 +21,8 @@ def _run_objcopy(args):
         "-j",
         ".sbat",
         "-j",
+        ".sbom",
+        "-j",
         ".sdata",
         "-j",
         ".data",
@@ -29,14 +31,14 @@ def _run_objcopy(args):
         "-j",
         ".rodata",
         "-j",
+        ".areloc",
+        "-j",
         ".rel*",
-        "--section-alignment",
-        "512",
         args.infile,
         args.outfile,
     ]
 
-    # older objcopy for Aarch64 and ARM32 are not EFI capable.
+    # older objcopy for Aarch64, ARM32 and RISC-V are not EFI capable.
     # Use "binary" instead, and add required symbols manually.
     if args.objcopy_manualsymbols:
         argv.extend(["-O", "binary"])

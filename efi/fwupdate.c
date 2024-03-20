@@ -14,6 +14,14 @@
 #include "fwup-debug.h"
 #include "fwup-efi.h"
 
+#ifndef EFI_OPTNONE
+#ifdef __clang__
+#define EFI_OPTNONE __attribute__((optnone))
+#else
+#define EFI_OPTNONE __attribute__((__optimize__("0")))
+#endif
+#endif
+
 #define UNUSED __attribute__((__unused__))
 #define GNVN_BUF_SIZE			1024
 #define FWUP_NUM_CAPSULE_UPDATES_MAX	128
@@ -423,7 +431,7 @@ fwup_add_update_capsule(FWUP_UPDATE_TABLE *update, EFI_CAPSULE_HEADER **capsule_
 	capsule = cap_out = (EFI_CAPSULE_HEADER *)fbuf;
 	if (cap_out->Flags == 0 &&
 	    CompareGuid(&update->info->guid, &ux_capsule_guid) != 0) {
-#if defined(__aarch64__)
+#if defined(__aarch64__) || (defined(__riscv) && __riscv_xlen == 64)
 		cap_out->Flags |= update->info->capsule_flags;
 #else
 		cap_out->Flags |= update->info->capsule_flags |
@@ -502,7 +510,7 @@ EFI_GUID SHIM_LOCK_GUID =
  {0x605dab50,0xe046,0x4300,{0xab,0xb6,0x3d,0xd8,0x10,0xdd,0x8b,0x23}};
 
 static VOID
-__attribute__((__optimize__("0")))
+EFI_OPTNONE
 fwup_debug_hook(VOID)
 {
 	EFI_GUID guid = SHIM_LOCK_GUID;

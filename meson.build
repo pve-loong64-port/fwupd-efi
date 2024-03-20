@@ -1,7 +1,7 @@
 project('fwupd-efi', 'c',
-  version : '1.4',
+  version : '1.5',
   license : 'LGPL-2.1+',
-  meson_version : '>=0.53.0',
+  meson_version : '>=0.62.0',
   default_options : ['warning_level=2', 'c_std=c99'],
 )
 
@@ -9,9 +9,8 @@ conf = configuration_data()
 conf.set_quoted('PACKAGE_VERSION', meson.project_version())
 
 cc = meson.get_compiler('c')
-ld = cc.get_linker_id()
 objcopy = find_program('objcopy')
-objcopy_version = run_command(objcopy, '--version').stdout().split('\n')[0].split(' ')[-1]
+objcopy_version = run_command(objcopy, '--version', check: true).stdout().split('\n')[0].split(' ')[-1]
 
 prefix = get_option('prefix')
 libdir = join_paths(prefix, get_option('libdir'))
@@ -33,6 +32,12 @@ elif host_cpu == 'arm'
 elif host_cpu == 'aarch64'
         EFI_MACHINE_TYPE_NAME = 'aa64'
         gnu_efi_arch = 'aarch64'
+elif host_cpu == 'loongarch64'
+        EFI_MACHINE_TYPE_NAME = 'loongarch64'
+        gnu_efi_arch = 'loongarch64'
+elif host_cpu == 'riscv64'
+        EFI_MACHINE_TYPE_NAME = 'riscv64'
+        gnu_efi_arch = 'riscv64'
 else
         error('Unknown host_cpu ' + host_cpu)
 endif
@@ -56,5 +61,11 @@ pkgg.generate(
 )
 
 fwupd_efi_dep = declare_dependency()
+
+# SBOM support
+uswid = find_program('uswid', required: false)
+if not uswid.found()
+  warning('uswid is unfound, so not embedding uSWID metadata')
+endif
 
 subdir('efi')
