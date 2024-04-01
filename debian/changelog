@@ -1,3 +1,10 @@
+fwupd-efi (1:1.5-3) UNRELEASED; urgency=medium
+
+  * Backport some patches from upstream that should
+    fix FTBFS on aarch64 with newer gnu-efi.
+
+ -- Mario Limonciello <superm1@gmail.com>  Mon, 01 Apr 2024 12:09:13 -0500
+
 fwupd-efi (1:1.5-2) unstable; urgency=medium
 
   * Bump minimum gnu-efi version to 3.0.18

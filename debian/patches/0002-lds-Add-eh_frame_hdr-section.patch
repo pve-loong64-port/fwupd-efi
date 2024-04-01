@@ -1,0 +1,92 @@
+From 561286c783db77d6dee57e48c99409565a243b39 Mon Sep 17 00:00:00 2001
+From: Callum Farmer <gmbr3@opensuse.org>
+Date: Mon, 1 Apr 2024 15:41:29 +0100
+Subject: [PATCH 2/2] lds: Add eh_frame_hdr section
+
+A new section has appeared, move it to the correct place
+
+Signed-off-by: Callum Farmer <gmbr3@opensuse.org>
+---
+ efi/lds/elf_aarch64_efi.lds        | 1 +
+ efi/lds/elf_aarch64_efi_system.lds | 1 +
+ efi/lds/elf_ia32_efi.lds           | 1 +
+ efi/lds/elf_loongarch64_efi.lds    | 1 +
+ efi/lds/elf_riscv64_efi.lds        | 1 +
+ efi/lds/elf_x86_64_efi.lds         | 1 +
+ 6 files changed, 6 insertions(+)
+
+diff --git a/efi/lds/elf_aarch64_efi.lds b/efi/lds/elf_aarch64_efi.lds
+index 22b475e..c976853 100644
+--- a/efi/lds/elf_aarch64_efi.lds
++++ b/efi/lds/elf_aarch64_efi.lds
+@@ -158,6 +158,7 @@ SECTIONS
+   .gnu.hash : { *(.gnu.hash) }
+   . = ALIGN(4096);
+   .eh_frame : { *(.eh_frame) }
++  .eh_frame_hdr : { *(.eh_frame_hdr) }
+   . = ALIGN(4096);
+   .gcc_except_table : { *(.gcc_except_table*) }
+   /DISCARD/ :
+diff --git a/efi/lds/elf_aarch64_efi_system.lds b/efi/lds/elf_aarch64_efi_system.lds
+index 81de238..e3af2c5 100644
+--- a/efi/lds/elf_aarch64_efi_system.lds
++++ b/efi/lds/elf_aarch64_efi_system.lds
+@@ -10,6 +10,7 @@ SECTIONS
+   .gnu.hash : { *(.gnu.hash) }
+   . = ALIGN(4096);
+   .eh_frame : { *(.eh_frame) }
++  .eh_frame_hdr : { *(.eh_frame_hdr) }
+   .gcc_except_table : { *(.gcc_except_table*) }
+   . = ALIGN(4096);
+   .text : {
+diff --git a/efi/lds/elf_ia32_efi.lds b/efi/lds/elf_ia32_efi.lds
+index 47e2f70..0d03f13 100644
+--- a/efi/lds/elf_ia32_efi.lds
++++ b/efi/lds/elf_ia32_efi.lds
+@@ -9,6 +9,7 @@ SECTIONS
+   .hash : { *(.hash) }
+   .gnu.hash : { *(.gnu.hash) }
+   .eh_frame : { *(.eh_frame) }
++  .eh_frame_hdr : { *(.eh_frame_hdr) }
+   .gcc_except_table : { *(.gcc_except_table*) }
+   . = ALIGN(4096);
+   .text :
+diff --git a/efi/lds/elf_loongarch64_efi.lds b/efi/lds/elf_loongarch64_efi.lds
+index 7eb40f0..c7a77a3 100644
+--- a/efi/lds/elf_loongarch64_efi.lds
++++ b/efi/lds/elf_loongarch64_efi.lds
+@@ -158,6 +158,7 @@ SECTIONS
+   .gnu.hash : { *(.gnu.hash) }
+   . = ALIGN(4096);
+   .eh_frame : { *(.eh_frame) }
++  .eh_frame_hdr : { *(.eh_frame_hdr) }
+   . = ALIGN(4096);
+   .gcc_except_table : { *(.gcc_except_table*) }
+   /DISCARD/ :
+diff --git a/efi/lds/elf_riscv64_efi.lds b/efi/lds/elf_riscv64_efi.lds
+index e465ae6..b5577d1 100644
+--- a/efi/lds/elf_riscv64_efi.lds
++++ b/efi/lds/elf_riscv64_efi.lds
+@@ -160,6 +160,7 @@ SECTIONS
+   .gnu.hash : { *(.gnu.hash) }
+   . = ALIGN(4096);
+   .eh_frame : { *(.eh_frame) }
++  .eh_frame_hdr : { *(.eh_frame_hdr) }
+   . = ALIGN(4096);
+   .gcc_except_table : { *(.gcc_except_table*) }
+   /DISCARD/ :
+diff --git a/efi/lds/elf_x86_64_efi.lds b/efi/lds/elf_x86_64_efi.lds
+index 356d4b8..d274f7e 100644
+--- a/efi/lds/elf_x86_64_efi.lds
++++ b/efi/lds/elf_x86_64_efi.lds
+@@ -11,6 +11,7 @@ SECTIONS
+   .gnu.hash : { *(.gnu.hash) }
+   . = ALIGN(4096);
+   .eh_frame : { *(.eh_frame) }
++  .eh_frame_hdr : { *(.eh_frame_hdr) }
+   .gcc_except_table : { *(.gcc_except_table*) }
+   . = ALIGN(4096);
+   .text :
+-- 
+2.34.1
+

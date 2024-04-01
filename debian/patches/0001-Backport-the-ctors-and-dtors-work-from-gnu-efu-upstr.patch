@@ -1,0 +1,141 @@
+From 10bd32829e73aa5558b9580684b08a0ba47b5ab3 Mon Sep 17 00:00:00 2001
+From: Richard Hughes <richard@hughsie.com>
+Date: Mon, 25 Mar 2024 10:10:02 +0000
+Subject: [PATCH] Backport the ctors and dtors work from gnu-efu upstream
+
+---
+ efi/lds/elf_aarch64_efi.lds     | 5 ++++-
+ efi/lds/elf_arm_efi.lds         | 7 +++++--
+ efi/lds/elf_ia32_efi.lds        | 6 +++++-
+ efi/lds/elf_loongarch64_efi.lds | 4 ++++
+ efi/lds/elf_riscv64_efi.lds     | 1 +
+ efi/lds/elf_x86_64_efi.lds      | 6 +++++-
+ 6 files changed, 24 insertions(+), 5 deletions(-)
+
+diff --git a/efi/lds/elf_aarch64_efi.lds b/efi/lds/elf_aarch64_efi.lds
+index 782afd4..22b475e 100644
+--- a/efi/lds/elf_aarch64_efi.lds
++++ b/efi/lds/elf_aarch64_efi.lds
+@@ -96,6 +96,10 @@ SECTIONS
+     *(.rela.got)
+     *(.rela.dyn)
+     *(.rela.stab)
++    *(.rela.init_array*)
++    *(.rela.fini_array*)
++    *(.rela.ctors*)
++    *(.rela.dtors*)
+ 
+   }
+   . = ALIGN(4096);
+@@ -163,4 +167,3 @@ SECTIONS
+   }
+   .comment 0 : { *(.comment) }
+ }
+-
+diff --git a/efi/lds/elf_arm_efi.lds b/efi/lds/elf_arm_efi.lds
+index 53f70a4..0ec597a 100644
+--- a/efi/lds/elf_arm_efi.lds
++++ b/efi/lds/elf_arm_efi.lds
+@@ -39,7 +39,7 @@ SECTIONS
+    *(.data.*)
+    *(.got.plt)
+    *(.got)
+-   
++
+    /*
+     * Note that these aren't the using the GNU "CONSTRUCTOR" output section
+     * command, so they don't start with a size.  Because of p2align and the
+@@ -67,7 +67,6 @@ SECTIONS
+    *(.fini_array)
+    __fini_array_end = .;
+ 
+-
+    /* the EFI loader doesn't seem to like a .bss section, so we stick
+       it all into .data: */
+    . = ALIGN(16);
+@@ -96,6 +95,10 @@ SECTIONS
+     *(.rel.got)
+     *(.rel.dyn)
+     *(.rel.stab)
++    *(.rel.init_array*)
++    *(.rel.fini_array*)
++    *(.rel.ctors*)
++    *(.rel.dtors*)
+ 
+   }
+   . = ALIGN(4096);
+diff --git a/efi/lds/elf_ia32_efi.lds b/efi/lds/elf_ia32_efi.lds
+index 39b5d68..47e2f70 100644
+--- a/efi/lds/elf_ia32_efi.lds
++++ b/efi/lds/elf_ia32_efi.lds
+@@ -31,7 +31,7 @@ SECTIONS
+    *(.data)
+    *(.data1)
+    *(.data.*)
+-   
++
+    /*
+     * Note that these aren't the using the GNU "CONSTRUCTOR" output section
+     * command, so they don't start with a size.  Because of p2align and the
+@@ -77,6 +77,10 @@ SECTIONS
+     *(.rel.got)
+     *(.rel.dyn)
+     *(.rel.stab)
++    *(.rel.init_array*)
++    *(.rel.fini_array*)
++    *(.rel.ctors*)
++    *(.rel.dtors*)
+     *(.data.rel.ro.local)
+     *(.data.rel.local)
+     *(.data.rel.ro)
+diff --git a/efi/lds/elf_loongarch64_efi.lds b/efi/lds/elf_loongarch64_efi.lds
+index 5d0a321..7eb40f0 100644
+--- a/efi/lds/elf_loongarch64_efi.lds
++++ b/efi/lds/elf_loongarch64_efi.lds
+@@ -96,6 +96,10 @@ SECTIONS
+     *(.rela.got)
+     *(.rela.dyn)
+     *(.rela.stab)
++    *(.rela.init_array*)
++    *(.rela.fini_array*)
++    *(.rela.ctors*)
++    *(.rela.dtors*)
+ 
+   }
+   . = ALIGN(4096);
+diff --git a/efi/lds/elf_riscv64_efi.lds b/efi/lds/elf_riscv64_efi.lds
+index 52aa289..e465ae6 100644
+--- a/efi/lds/elf_riscv64_efi.lds
++++ b/efi/lds/elf_riscv64_efi.lds
+@@ -169,3 +169,4 @@ SECTIONS
+   }
+   .comment 0 : { *(.comment) }
+ }
++
+diff --git a/efi/lds/elf_x86_64_efi.lds b/efi/lds/elf_x86_64_efi.lds
+index 3bbfb35..356d4b8 100644
+--- a/efi/lds/elf_x86_64_efi.lds
++++ b/efi/lds/elf_x86_64_efi.lds
+@@ -38,7 +38,7 @@ SECTIONS
+    *(.got)
+    *(.data*)
+    *(.sdata)
+-   
++
+    /*
+     * Note that these aren't the using the GNU "CONSTRUCTOR" output section
+     * command, so they don't start with a size.  Because of p2align and the
+@@ -89,6 +89,10 @@ SECTIONS
+     *(.rela.got)
+     *(.rela.dyn)
+     *(.rela.stab)
++    *(.rela.init_array*)
++    *(.rela.fini_array*)
++    *(.rela.ctors*)
++    *(.rela.dtors*)
+   }
+   . = ALIGN(4096);
+   .rela.plt : { *(.rela.plt) }
+-- 
+2.34.1
+
