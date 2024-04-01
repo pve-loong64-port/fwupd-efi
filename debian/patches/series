@@ -1,3 +1,4 @@
 0001-Backport-the-ctors-and-dtors-work-from-gnu-efu-upstr.patch
 0001-Ship-an-objcopy-capable-LDS-for-ARM64.patch
 0002-lds-Add-eh_frame_hdr-section.patch
+0001-trivial-fix-a-logic-error-in-c3bffc83.patch
