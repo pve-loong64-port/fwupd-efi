@@ -1,5 +1,5 @@
-OUTPUT_FORMAT("elf32-i386", "elf32-i386", "elf32-i386")
-OUTPUT_ARCH(i386)
+OUTPUT_FORMAT("elf64-littleaarch64", "elf64-littleaarch64", "elf64-littleaarch64")
+OUTPUT_ARCH(aarch64)
 ENTRY(_start)
 SECTIONS
 {
@@ -8,31 +8,41 @@ SECTIONS
   /* .hash and/or .gnu.hash MUST come first! */
   .hash : { *(.hash) }
   .gnu.hash : { *(.gnu.hash) }
+  . = ALIGN(4096);
   .eh_frame : { *(.eh_frame) }
   .eh_frame_hdr : { *(.eh_frame_hdr) }
   .gcc_except_table : { *(.gcc_except_table*) }
   . = ALIGN(4096);
-  .text :
-  {
-   _text = .;
-   *(.text)
-   *(.text.*)
-   *(.gnu.linkonce.t.*)
-   *(.plt)
-   . = ALIGN(16);
+  .text : {
+    _text = .;
+    *(.text)
+    *(.text.*)
+    *(.gnu.linkonce.t.*)
+    *(.plt)
+    . = ALIGN(16);
+    _etext = .;
   }
-  _etext = .;
   _text_size = _etext - _text;
+  . = ALIGN(65536);
+  _reloc = .;
+  .reloc : {
+    *(.reloc)
+    _ereloc = .;
+  }
+  _reloc_size = _ereloc - _reloc;
+  . = ALIGN(4096);
+  _data = .;
+  .dynamic  : { *(.dynamic) }
   . = ALIGN(4096);
   .data :
   {
-   _data = .;
-   *(.got.plt)
-   *(.got)
+   *(.sdata)
    *(.data)
    *(.data1)
    *(.data.*)
-
+   *(.got.plt)
+   *(.got)
+   
    /*
     * Note that these aren't the using the GNU "CONSTRUCTOR" output section
     * command, so they don't start with a size.  Because of p2align and the
@@ -62,35 +72,43 @@ SECTIONS
 
    /* the EFI loader doesn't seem to like a .bss section, so we stick
       it all into .data: */
+   . = ALIGN(16);
+   _bss = .;
+   *(.sbss)
+   *(.scommon)
    *(.dynbss)
-   *(.bss*)
+   *(.bss)
+   *(.bss.*)
    *(COMMON)
+   . = ALIGN(16);
+   _bss_end = .;
+   _edata = .;
   }
-  .note.gnu.build-id : { *(.note.gnu.build-id) }
+  _data_size = _edata - _data;
 
   . = ALIGN(4096);
-  .dynamic  : { *(.dynamic) }
-  . = ALIGN(4096);
-  .rel :
+  _rodata = .;
+  .rela :
   {
-    *(.rel.text*)
-    *(.rel.data*)
-    *(.rel.got)
-    *(.rel.dyn)
-    *(.rel.stab)
-    *(.rel.init_array*)
-    *(.rel.fini_array*)
-    *(.rel.ctors*)
-    *(.rel.dtors*)
-    *(.data.rel.ro.local)
-    *(.data.rel.local)
-    *(.data.rel.ro)
-    *(.data.rel*)
+    *(.rela.text*)
+    *(.rela.data*)
+    *(.rela.got)
+    *(.rela.dyn)
+    *(.rela.stab)
+    *(.rela.init_array*)
+    *(.rela.fini_array*)
+    *(.rela.ctors*)
+    *(.rela.dtors*)
+
   }
   . = ALIGN(4096);
-  .rel.plt : { *(.rel.plt) }
+  .rela.plt : { *(.rela.plt) }
   . = ALIGN(4096);
-  .rodata : { *(.rodata*) }
+  .rodata : {
+    *(.rodata*)
+    _erodata = .;
+  }
+  _rodata_size = _erodata - _rodata;
   /*
    * Note that _sbat must be the beginning of the data, and _esbat must be the
    * end and must be before any section padding.  The sbat self-check uses
@@ -110,22 +128,26 @@ SECTIONS
   }
   _sbat_size = _epsbat - _sbat;
   _sbat_vsize = _esbat - _sbat;
-  _edata = .;
-  _data_size = _edata - _etext;
   . = ALIGN(4096);
-  .sbom : { *(.sbom) }
-  . = ALIGN(4096);
-  .reloc :		/* This is the PECOFF .reloc section! */
+  .sbom :
   {
-    KEEP (*(.reloc))
+    _sbom = .;
+    *(.sbom)
+    _epsbom = .;
   }
+  _sbom_size = _epsbom - _sbom;
+  _image_end = .;
+  _alldata_size = _image_end - _reloc;
+
   . = ALIGN(4096);
   .dynsym   : { *(.dynsym) }
   . = ALIGN(4096);
   .dynstr   : { *(.dynstr) }
+  . = ALIGN(4096);
+  .note.gnu.build-id : { *(.note.gnu.build-id) }
   /DISCARD/ :
   {
-    *(.rel.reloc)
+    *(.rela.reloc)
     *(.note.GNU-stack)
   }
   .comment 0 : { *(.comment) }

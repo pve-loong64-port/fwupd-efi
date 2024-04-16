@@ -11,6 +11,7 @@ SECTIONS
   .gnu.hash : { *(.gnu.hash) }
   . = ALIGN(4096);
   .eh_frame : { *(.eh_frame) }
+  .eh_frame_hdr : { *(.eh_frame_hdr) }
   .gcc_except_table : { *(.gcc_except_table*) }
   . = ALIGN(4096);
   .text :
@@ -38,7 +39,7 @@ SECTIONS
    *(.got)
    *(.data*)
    *(.sdata)
-   
+
    /*
     * Note that these aren't the using the GNU "CONSTRUCTOR" output section
     * command, so they don't start with a size.  Because of p2align and the
@@ -89,6 +90,10 @@ SECTIONS
     *(.rela.got)
     *(.rela.dyn)
     *(.rela.stab)
+    *(.rela.init_array*)
+    *(.rela.fini_array*)
+    *(.rela.ctors*)
+    *(.rela.dtors*)
   }
   . = ALIGN(4096);
   .rela.plt : { *(.rela.plt) }
