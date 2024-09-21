@@ -1,5 +1,5 @@
-generate_sbat = find_program('generate_sbat.py', native: true)
-generate_binary = find_program('generate_binary.py', native: true)
+generate_sbat = [python3, files('generate_sbat.py')]
+generate_binary = [python3, files('generate_binary.py')]
 
 # get source version, falling back
 git = find_program('git', required : false)
@@ -206,6 +206,7 @@ efi_ldflags = ['-T',
                '-Bsymbolic',
                '-nostdlib',
                '-znocombreloc',
+               '-znorelro',
                '-L', efi_crtdir,
                '-L', efi_libdir,
                join_paths(efi_crtdir, arch_crt)]
@@ -230,6 +231,13 @@ endif
 
 libgcc_file_name = run_command(cc.cmd_array(), '-print-libgcc-file-name', check: true).stdout().strip()
 efi_name = 'fwupd@0@.efi'.format(EFI_MACHINE_TYPE_NAME)
+
+# GNU-EFI 4.0 changed how CompareGuid works (to align with EDK2)
+# Keep GNU-EFI 3.0 support for a while
+if gnuefi.version().version_compare('>=4.0.0')
+  compile_args += ['-DGNU_EFI_3_0_COMPAT']
+endif
+
 
 o_files = []
 o_files += custom_target('fwupdate.o',

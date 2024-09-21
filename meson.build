@@ -1,5 +1,5 @@
 project('fwupd-efi', 'c',
-  version : '1.6',
+  version : '1.7',
   license : 'LGPL-2.1+',
   meson_version : '>=0.62.0',
   default_options : ['warning_level=2', 'c_std=c99'],
@@ -17,7 +17,14 @@ prefix = get_option('prefix')
 libdir = join_paths(prefix, get_option('libdir'))
 libexecdir = join_paths(prefix, get_option('libexecdir'))
 
-genpeimg = find_program ('genpeimg', required: false)
+genpeimg = find_program ('genpeimg', required: get_option('genpeimg'))
+
+python3path = get_option('python')
+if python3path == ''
+  python3 = import('python').find_installation('python3')
+else
+  python3 = find_program(python3path)
+endif
 
 efi_app_location = join_paths(libexecdir, 'fwupd', 'efi')
 host_cpu = host_machine.cpu_family()
