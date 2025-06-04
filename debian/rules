@@ -25,11 +25,11 @@ ifeq (yes,$(shell dpkg-vendor --derives-from Ubuntu && echo yes))
 	CONFARGS += -Defi_sbat_distro_url="https://launchpad.net/ubuntu/+source/fwupd"
 else
 	TMPLDIR  := debian/fwupd-$(DEB_HOST_ARCH)-signed-template/usr/share/code-signing/fwupd-$(DEB_HOST_ARCH)-signed-template
-	CONFARGS += -Defi_sbat_distro_id=debian
-	CONFARGS += -Defi_sbat_distro_summary=Debian
+	CONFARGS += -Defi_sbat_distro_id=proxmox
+	CONFARGS += -Defi_sbat_distro_summary=Proxmox
 	CONFARGS += -Defi_sbat_distro_pkgname=fwupd
 	CONFARGS += -Defi_sbat_distro_version=$(deb_version)
-	CONFARGS += -Defi_sbat_distro_url="https://tracker.debian.org/pkg/fwupd"
+	CONFARGS += -Defi_sbat_distro_url="https://git.proxmox.com/?p=fwupd-efi.git"
 endif
 
 %:
