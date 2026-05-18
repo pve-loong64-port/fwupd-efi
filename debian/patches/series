@@ -1,0 +1,2 @@
+0001-Fix-build-error-of-LoongArch-in-gnu-efi-3.0.18.patch
+0002-Do-not-generate-SIMD-on-LoongArch-architecture.patch
